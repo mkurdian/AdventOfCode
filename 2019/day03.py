@@ -7,6 +7,7 @@ def manhatten(point_1, point_2 = (0,0)):
     """
     return abs(point_1[0] - point_2[0]) + abs(point_1[1] - point_2[1])
 
+
 class Panel:
     """
     A panel
@@ -26,13 +27,29 @@ class Panel:
 
         return crossings
 
-
     def distance(self):
         """
         Returns the manhatten distance to the intersection point
         that is closest to the central port.
         """
         return min(map(manhatten, self._find_crossings()))
+
+    def minimum_steps_to_crossing(self):
+        """
+        Return the minimum number of steps to get to an intersection.
+        """
+        wire_1 = self._wires[0]
+        wire_2 = self._wires[1]
+
+        crossings = self._find_crossings()
+        distances = []
+        for crossing in crossings:
+            a = wire_1.steps_to(crossing)
+            b = wire_2.steps_to(crossing)
+            distances.append(a + b)
+
+        return min(distances)
+
 
 class Wire:
     """
@@ -73,7 +90,10 @@ class Wire:
 
     def __iter__(self):
         for point in self._points:
-            yield point    
+            yield point
+
+    def steps_to(self, point):
+        return self._points.index(point) + 1
 
 
 class TestDay03(unittest.TestCase):
@@ -94,6 +114,22 @@ class TestDay03(unittest.TestCase):
         panel = Panel(wire_1, wire_2)
         self.assertEqual(panel.distance(), 135)
 
+    def test_solution_2(self):
+        wire_1 = Wire("R8,U5,L5,D3")
+        wire_2 = Wire("U7,R6,D4,L4")
+        panel = Panel(wire_1, wire_2)
+        self.assertEqual(panel.minimum_steps_to_crossing(), 30)
+
+        wire_1 = Wire("R75,D30,R83,U83,L12,D49,R71,U7,L72")
+        wire_2 = Wire("U62,R66,U55,R34,D71,R55,D58,R83")
+        panel = Panel(wire_1, wire_2)
+        self.assertEqual(panel.minimum_steps_to_crossing(), 610)
+
+        wire_1 = Wire("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51")
+        wire_2 = Wire("U98,R91,D20,R16,D67,R40,U7,R15,U6,R7")
+        panel = Panel(wire_1, wire_2)
+        self.assertEqual(panel.minimum_steps_to_crossing(), 410)
+
 
 if __name__ == '__main__':
     with open('inputs/input_day03.in') as file:
@@ -103,3 +139,4 @@ if __name__ == '__main__':
     wire_2 = Wire(lines[1])
     panel = Panel(wire_1, wire_2)
     print("Part 1: ", panel.distance())
+    print("Part 2: ", panel.minimum_steps_to_crossing())

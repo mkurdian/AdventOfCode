@@ -42,12 +42,15 @@ class Program:
         elif optcode == 3:
             self._program[output] = input
         elif optcode == 4:
-            return self._program[output]
+            print(self._program[output])
         else:
             raise Exception("Unrecognised optcode.")
 
     def __iter__(self):
         return ProgramIterator(self._program, self._instruction_size)
+
+    def __str__(self):
+        return ",".join(map(str, self._program))
 
 
 class ProgramIterator:
@@ -63,7 +66,7 @@ class ProgramIterator:
         return self
 
     def __next__(self):
-        optcode = self.program[self.index]
+        optcode = int(str(self.program[self.index])[-2:])
 
         if optcode == 99:
             raise StopIteration()
@@ -113,6 +116,11 @@ class TestDay02(unittest.TestCase):
     def test_day05_solution(self):
         program = Program('3,0,4,0,99')
         self.assertEqual(Computer(program).run(diagnostic_id=123), 123)
+
+        program = Program('1002,4,3,4,33')
+        instruction = next(iter(program))
+        program.execute(instruction)
+        self.assertEqual(str(program), '1002,4,3,4,99')
 
 
 if __name__ == '__main__':

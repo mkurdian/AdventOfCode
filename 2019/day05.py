@@ -25,26 +25,34 @@ class Program:
         self._program[1] = noun
         self._program[2] = verb
 
-    def execute(self, instruction, input = None):
+    def execute(self, instruction, input=None):
         """
         Executes a given instruction according to the
-        value of the optcode.
+        value of the opcode.
         """
-        optcode = instruction['optcode']
+        opcode = instruction['opcode']
         output = instruction['output']
-        
-        values = list(map(self._program.__getitem__, instruction['inputs']))
+        modes = instruction['modes']
 
-        if optcode == 1:
+        values = []
+        for index, value in enumerate(instruction['inputs']):
+            if modes[index] == 0:
+                values.append(self._program[value])
+            elif modes[index] == 1:
+                values.append(value)
+            else:
+                raise ValueError("Unrecognised mode")
+
+        if opcode == 1:
             self._program[output] = reduce(lambda a, b: a + b, values)
-        elif optcode == 2:
+        elif opcode == 2:
             self._program[output] = reduce(lambda a, b: a * b, values)
-        elif optcode == 3:
+        elif opcode == 3:
             self._program[output] = input
-        elif optcode == 4:
-            print(self._program[output])
+        elif opcode == 4:
+            print("Diagnostic code: ", self._program[output])
         else:
-            raise Exception("Unrecognised optcode.")
+            raise Exception("Unrecognised opcode.")
 
     def __iter__(self):
         return ProgramIterator(self._program, self._instruction_size)
@@ -66,22 +74,24 @@ class ProgramIterator:
         return self
 
     def __next__(self):
-        optcode = int(str(self.program[self.index])[-2:])
+        opcode = int(str(self.program[self.index])[-2:])
 
-        if optcode == 99:
+        if opcode == 99:
             raise StopIteration()
 
-        instruction_size = self.instruction_size[optcode]
+        instruction_size = self.instruction_size[opcode]
         
-        inputs = self.program[self.index + 1 : self.index + instruction_size - 1]
+        inputs = self.program[self.index + 1: self.index + instruction_size - 1]
         output = self.program[self.index + instruction_size - 1]
+        modes = get_modes(self.program[self.index])
 
         self.index += instruction_size
 
         return {
-            "optcode": optcode,
+            "opcode": opcode,
             "inputs": inputs,
-            "output": output
+            "output": output,
+            "modes": modes
         }
 
 
@@ -96,6 +106,36 @@ class Computer:
         for instruction in self._program:
             self._program.execute(instruction, diagnostic_id)
         return self._program.result()
+
+
+def get_modes(code):
+    """
+    Get the mode codes as list from the given code.
+    """
+    mode_code = code // 100  # remove opcode
+    result = [0, 0, 0]
+
+    if mode_code < 10:
+        result[0] = mode_code
+        return result
+    elif mode_code < 100:
+        digits = split_digits(mode_code)[::-1]
+        result[0] = digits[0]
+        result[1] = digits[1]
+        return result
+    elif mode_code < 1000:
+        return split_digits(mode_code)[::-1]
+
+
+def split_digits(number):
+    """
+    Split the digits of the number into a list of integers.
+    """
+    digits = []
+    while number > 0:
+        digits.append(number % 10)
+        number = number // 10
+    return digits[::-1]
 
 
 class TestDay02(unittest.TestCase):
@@ -122,9 +162,27 @@ class TestDay02(unittest.TestCase):
         program.execute(instruction)
         self.assertEqual(str(program), '1002,4,3,4,99')
 
+    def test_get_modes(self):
+        self.assertEqual(get_modes(3), [0, 0, 0])
+
+        self.assertEqual(get_modes(103), [1, 0, 0])
+
+        self.assertEqual(get_modes(1103), [1, 1, 0])
+
+        self.assertEqual(get_modes(11103), [1, 1, 1])
+
+        self.assertEqual(get_modes(10103), [1, 0, 1])
+
+        self.assertEqual(get_modes(11003), [0, 1, 1])
+
+        self.assertEqual(get_modes(1002), [0, 1, 0])
+
 
 if __name__ == '__main__':
 
     # Read input
     with open('inputs/input_day05.in') as file:
         source_code = file.readline()
+
+    program = Program(source_code)
+    Computer(program).run(diagnostic_id=1)

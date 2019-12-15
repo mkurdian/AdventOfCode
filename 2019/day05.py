@@ -64,39 +64,42 @@ class ProgramIterator:
             raise StopIteration()
 
         instruction_size = self.instruction_size[opcode]
-        
-        parameters = self.program[self.instruction_pointer + 1: self.instruction_pointer + instruction_size - 1]
-        output = self.program[self.instruction_pointer + instruction_size - 1]
+
+        parameters = self.program[self.instruction_pointer + 1: self.instruction_pointer + instruction_size]
         modes = get_modes(self.program[self.instruction_pointer])
 
         self.instruction_pointer += instruction_size
 
         if opcode == 1:
-            return Instruction1(opcode, modes, parameters, output)
+            return Instruction1(opcode, parameters, modes)
         elif opcode == 2:
-            return Instruction2(opcode, modes, parameters, output)
+            return Instruction2(opcode, parameters, modes)
         elif opcode == 3:
-            return Instruction3(opcode, output)
+            return Instruction3(opcode, parameters)
         elif opcode == 4:
-            return Instruction4(opcode, output)
+            return Instruction4(opcode, parameters)
+        else:
+            raise ValueError("Unrecognised opcode")
 
 
 class Instruction(ABC):
+    def __init__(self, opcode, parameters, modes=None):
+        self.opcode = opcode
+        self.parameters = parameters
+        self.modes = modes
+
     @abstractmethod
     def execute(self, program, input=None):
         pass
 
 
 class Instruction1(Instruction):
-    def __init__(self, opcode, modes, parameters, output):
-        self.opcode = opcode
-        self.modes = modes
-        self.parameters = parameters
-        self.output = output
 
     def execute(self, program, input=None):
+        parameters = self.parameters[:-1]
+        output = self.parameters[-1]
         values = []
-        for index, value in enumerate(self.parameters):
+        for index, value in enumerate(parameters):
             if self.modes[index] == 0:
                 values.append(program._program[value])
             elif self.modes[index] == 1:
@@ -104,19 +107,16 @@ class Instruction1(Instruction):
             else:
                 raise ValueError("Unrecognised mode")
 
-        program._program[self.output] = reduce(lambda a, b: a + b, values)
+        program._program[output] = reduce(lambda a, b: a + b, values)
 
 
 class Instruction2(Instruction):
-    def __init__(self, opcode, modes, parameters, output):
-        self.opcode = opcode
-        self.modes = modes
-        self.parameters = parameters
-        self.output = output
 
     def execute(self, program, input=None):
+        parameters = self.parameters[:-1]
+        output = self.parameters[-1]
         values = []
-        for index, value in enumerate(self.parameters):
+        for index, value in enumerate(parameters):
             if self.modes[index] == 0:
                 values.append(program._program[value])
             elif self.modes[index] == 1:
@@ -124,25 +124,21 @@ class Instruction2(Instruction):
             else:
                 raise ValueError("Unrecognised mode")
 
-        program._program[self.output] = reduce(lambda a, b: a * b, values)
+        program._program[output] = reduce(lambda a, b: a * b, values)
 
 
 class Instruction3(Instruction):
-    def __init__(self, opcode, output):
-        self.opcode = opcode
-        self.output = output
 
     def execute(self, program, input=None):
-        program._program[self.output] = input
+        output = self.parameters[-1]
+        program._program[output] = input
 
 
 class Instruction4(Instruction):
-    def __init__(self, opcode, output):
-        self.opcode = opcode
-        self.output = output
 
     def execute(self, program, input=None):
-        print("Diagnostic code: ", program._program[self.output])
+        output = self.parameters[-1]
+        print("Diagnostic code: ", program._program[output])
 
 
 class Computer:

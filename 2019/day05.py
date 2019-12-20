@@ -9,7 +9,7 @@ class Program:
     """
     def __init__(self, source_code):
         self._program = list(map(int, source_code.split(',')))
-        self._instruction_size = {1: 4, 2: 4, 3: 2, 4: 2}
+        self._instruction_pointer = 0
 
     def result(self):
         """
@@ -31,114 +31,221 @@ class Program:
         Executes a given instruction according to the
         value of the opcode.
         """
-        opcode = instruction.opcode
+        instruction.execute(self, input)
 
-        if opcode in [1, 2, 3, 4]:
-            instruction.execute(self, input)
-        else:
-            raise Exception("Unrecognised opcode.")
+    def update_program(self, intruction_pointer, value):
+        self._program[intruction_pointer] = value
 
     def __iter__(self):
-        return ProgramIterator(self._program, self._instruction_size)
+        return ProgramIterator(self)
 
     def __str__(self):
         return ",".join(map(str, self._program))
+
+    @property
+    def instruction_pointer(self):
+        return self._instruction_pointer
+
+    @property
+    def current_value(self):
+        return self._program[self._instruction_pointer]
 
 
 class ProgramIterator:
     """
     An iterator to be only used by the Program class
     """
-    def __init__(self, program, instruction_size):
+    def __init__(self, program):
         self.program = program
-        self.instruction_pointer = 0
-        self.instruction_size = instruction_size
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        opcode = int(str(self.program[self.instruction_pointer])[-2:])
+        opcode = int(str(self.program.current_value)[-2:])
 
         if opcode == 99:
             raise StopIteration()
 
-        instruction_size = self.instruction_size[opcode]
-
-        parameters = self.program[self.instruction_pointer + 1: self.instruction_pointer + instruction_size]
-        modes = get_modes(self.program[self.instruction_pointer])
-
-        self.instruction_pointer += instruction_size
+        args = {
+            'program': self.program
+        }
 
         if opcode == 1:
-            return Instruction1(opcode, parameters, modes)
+            return Instruction1(args)
         elif opcode == 2:
-            return Instruction2(opcode, parameters, modes)
+            return Instruction2(args)
         elif opcode == 3:
-            return Instruction3(opcode, parameters)
+            return Instruction3(args)
         elif opcode == 4:
-            return Instruction4(opcode, parameters)
+            return Instruction4(args)
+        elif opcode == 5:
+            return Instruction5(args)
+        elif opcode == 6:
+            return Instruction6(args)
+        elif opcode == 7:
+            return Instruction7(args)
+        elif opcode == 8:
+            return Instruction8(args)
         else:
             raise ValueError("Unrecognised opcode")
 
 
 class Instruction(ABC):
-    def __init__(self, opcode, parameters, modes=None):
-        self.opcode = opcode
-        self.parameters = parameters
-        self.modes = modes
+
+    def __init__(self, args):
+        self.program = args.get('program', None)
 
     @abstractmethod
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         pass
+
+    @property
+    def instruction_pointer(self):
+        return self.program.instruction_pointer
+
+    def value(self, start, stop=None):
+        if stop:
+            return self.program._program[start:stop]
+        return self.program._program[start]
+
+    def set_instruction_pointer(self, value):
+        self.program._instruction_pointer = value
+
+    def update_program(self, instruction_pointer, value):
+        self.program.update_program(instruction_pointer, value)
 
 
 class Instruction1(Instruction):
 
     def execute(self, program, input=None):
-        parameters = self.parameters[:-1]
-        output = self.parameters[-1]
+        instruction_size = 4
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        modes = get_modes(self.value(self.instruction_pointer))
+
+        params = parameters[:-1]
+        output = parameters[-1]
         values = []
-        for index, value in enumerate(parameters):
-            if self.modes[index] == 0:
-                values.append(program._program[value])
-            elif self.modes[index] == 1:
+        for index, value in enumerate(params):
+            if modes[index] == 0:
+                values.append(self.value(value))
+            elif modes[index] == 1:
                 values.append(value)
             else:
                 raise ValueError("Unrecognised mode")
 
-        program._program[output] = reduce(lambda a, b: a + b, values)
+        self.update_program(output, reduce(lambda a, b: a + b, values))
+        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
 
 
 class Instruction2(Instruction):
 
     def execute(self, program, input=None):
-        parameters = self.parameters[:-1]
-        output = self.parameters[-1]
+        instruction_size = 4
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        modes = get_modes(self.value(self.instruction_pointer))
+
+        params = parameters[:-1]
+        output = parameters[-1]
         values = []
-        for index, value in enumerate(parameters):
-            if self.modes[index] == 0:
-                values.append(program._program[value])
-            elif self.modes[index] == 1:
+        for index, value in enumerate(params):
+            if modes[index] == 0:
+                values.append(self.value(value))
+            elif modes[index] == 1:
                 values.append(value)
             else:
                 raise ValueError("Unrecognised mode")
 
-        program._program[output] = reduce(lambda a, b: a * b, values)
+        self.update_program(output, reduce(lambda a, b: a * b, values))
+        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
 
 
 class Instruction3(Instruction):
 
     def execute(self, program, input=None):
-        output = self.parameters[-1]
-        program._program[output] = input
+        instruction_size = 2
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        output = parameters[-1]
+        self.update_program(output, input)
+        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
 
 
 class Instruction4(Instruction):
 
     def execute(self, program, input=None):
-        output = self.parameters[-1]
-        print("Diagnostic code: ", program._program[output])
+        instruction_size = 2
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        output = parameters[-1]
+        print("Diagnostic code: ", self.value(output))
+        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+
+
+class Instruction5(Instruction):
+
+    def execute(self, program, input=None):
+        instruction_size = 3
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        modes = get_modes(self.value(self.instruction_pointer))
+        values = []
+        for index, value in enumerate(parameters):
+            if modes[index] == 0:
+                values.append(self.value(value))
+            elif modes[index] == 1:
+                values.append(value)
+            else:
+                raise ValueError("Unrecognised mode")
+        param_1 = values[0]
+        param_2 = values[1]
+        if param_1 != 0:
+            self.set_instruction_pointer(param_2)
+
+
+class Instruction6(Instruction):
+
+    def execute(self, program, input=None):
+        instruction_size = 3
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        modes = get_modes(self.value(self.instruction_pointer))
+        values = []
+        for index, value in enumerate(parameters):
+            if modes[index] == 0:
+                values.append(self.value(value))
+            elif modes[index] == 1:
+                values.append(value)
+            else:
+                raise ValueError("Unrecognised mode")
+        param_1 = values[0]
+        param_2 = values[1]
+        if param_1 == 0:
+            self.set_instruction_pointer(param_2)
+
+
+class Instruction7(Instruction):
+
+    def execute(self, program, input=None):
+        instruction_size = 4
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        param_1, param_2, param_3 = parameters
+        if param_1 < param_2:
+            self.update_program(param_3, 1)
+        else:
+            self.update_program(param_3, 0)
+
+        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+
+
+class Instruction8(Instruction):
+
+    def execute(self, program, input=None):
+        instruction_size = 4
+        parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
+        param_1, param_2, param_3 = parameters
+        if param_1 == param_2:
+            self.update_program(param_3, 1)
+        else:
+            self.update_program(param_3, 0)
+
+        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
 
 
 class Computer:
@@ -223,6 +330,42 @@ class TestDay02(unittest.TestCase):
 
         self.assertEqual(get_modes(1002), [0, 1, 0])
 
+    def test_part2(self):
+        program = Program("5,1,3,99")
+        instruction = next(iter(program))
+        instruction.execute(program)
+        self.assertEqual(program._instruction_pointer, 99)
+
+        program = Program("5,4,3,99,0")
+        instruction = next(iter(program))
+        instruction.execute(program)
+        self.assertEqual(program._instruction_pointer, 0)
+
+        program = Program("6,1,3,99")
+        instruction = next(iter(program))
+        instruction.execute(program)
+        self.assertEqual(program._instruction_pointer, 0)
+
+        program = Program("6,4,3,99,0")
+        instruction = next(iter(program))
+        instruction.execute(program)
+        self.assertEqual(program._instruction_pointer, 99)
+
+        program = Program("7,0,3,0,99")
+        self.assertEqual(Computer(program).run(), 1)
+
+        program = Program("7,4,3,0,99")
+        self.assertEqual(Computer(program).run(), 0)
+
+        program = Program("8,3,3,0,99")
+        self.assertEqual(Computer(program).run(), 1)
+
+        program = Program("8,3,4,0,99")
+        self.assertEqual(Computer(program).run(), 0)
+
+        program = Program("3,9,8,9,10,9,4,9,99,-1,8")
+        print(Computer(program).run(diagnostic_id=8))
+
 
 if __name__ == '__main__':
 
@@ -232,3 +375,6 @@ if __name__ == '__main__':
 
     program = Program(source_code)
     Computer(program).run(diagnostic_id=1)
+
+    program = Program(source_code)
+    Computer(program).run(diagnostic_id=9)

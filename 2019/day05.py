@@ -33,9 +33,12 @@ class Program:
         Executes a given instruction according to the
         value of the opcode.
         """
-        self._instruction_pointer = instruction.execute(self, input)
+        self._instruction_pointer = instruction.execute(input)
 
     def update_program(self, intruction_pointer, value):
+        """
+        Update program at position given by instruction_pointer.
+        """
         self._program[intruction_pointer] = value
 
     def __iter__(self):
@@ -120,7 +123,7 @@ class Instruction(ABC):
 
 class Instruction1(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 4
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         modes = get_modes(self.value(self.instruction_pointer))
@@ -142,7 +145,7 @@ class Instruction1(Instruction):
 
 class Instruction2(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 4
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         modes = get_modes(self.value(self.instruction_pointer))
@@ -164,7 +167,7 @@ class Instruction2(Instruction):
 
 class Instruction3(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 2
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         output = parameters[-1]
@@ -174,7 +177,7 @@ class Instruction3(Instruction):
 
 class Instruction4(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 2
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         output = parameters[-1]
@@ -184,7 +187,7 @@ class Instruction4(Instruction):
 
 class Instruction5(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 3
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         modes = get_modes(self.value(self.instruction_pointer))
@@ -205,7 +208,7 @@ class Instruction5(Instruction):
 
 class Instruction6(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 3
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         modes = get_modes(self.value(self.instruction_pointer))
@@ -226,7 +229,7 @@ class Instruction6(Instruction):
 
 class Instruction7(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 4
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         modes = get_modes(self.value(self.instruction_pointer))
@@ -253,7 +256,7 @@ class Instruction7(Instruction):
 
 class Instruction8(Instruction):
 
-    def execute(self, program, input=None):
+    def execute(self, input=None):
         instruction_size = 4
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         modes = get_modes(self.value(self.instruction_pointer))
@@ -425,8 +428,10 @@ if __name__ == '__main__':
     with open('inputs/input_day05.in') as file:
         source_code = file.readline()
 
+    # Part 1
     program = Program(source_code)
     Computer(program).run(diagnostic_id=1)
 
+    # Part 2
     program = Program(source_code)
     Computer(program).run(diagnostic_id=5)

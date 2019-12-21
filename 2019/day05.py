@@ -1,6 +1,8 @@
 import unittest
 from functools import reduce
 from abc import ABC, abstractmethod
+from io import StringIO
+from unittest.mock import patch
 
 
 class Program:
@@ -31,7 +33,7 @@ class Program:
         Executes a given instruction according to the
         value of the opcode.
         """
-        instruction.execute(self, input)
+        self._instruction_pointer = instruction.execute(self, input)
 
     def update_program(self, intruction_pointer, value):
         self._program[intruction_pointer] = value
@@ -135,7 +137,7 @@ class Instruction1(Instruction):
                 raise ValueError("Unrecognised mode")
 
         self.update_program(output, reduce(lambda a, b: a + b, values))
-        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction2(Instruction):
@@ -157,7 +159,7 @@ class Instruction2(Instruction):
                 raise ValueError("Unrecognised mode")
 
         self.update_program(output, reduce(lambda a, b: a * b, values))
-        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction3(Instruction):
@@ -167,7 +169,7 @@ class Instruction3(Instruction):
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         output = parameters[-1]
         self.update_program(output, input)
-        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction4(Instruction):
@@ -177,7 +179,7 @@ class Instruction4(Instruction):
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
         output = parameters[-1]
         print("Diagnostic code: ", self.value(output))
-        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction5(Instruction):
@@ -197,7 +199,8 @@ class Instruction5(Instruction):
         param_1 = values[0]
         param_2 = values[1]
         if param_1 != 0:
-            self.set_instruction_pointer(param_2)
+            return param_2
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction6(Instruction):
@@ -217,7 +220,8 @@ class Instruction6(Instruction):
         param_1 = values[0]
         param_2 = values[1]
         if param_1 == 0:
-            self.set_instruction_pointer(param_2)
+            return param_2
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction7(Instruction):
@@ -225,13 +229,26 @@ class Instruction7(Instruction):
     def execute(self, program, input=None):
         instruction_size = 4
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
-        param_1, param_2, param_3 = parameters
+        modes = get_modes(self.value(self.instruction_pointer))
+        values = []
+        for index, value in enumerate(parameters):
+            if modes[index] == 0:
+                values.append(self.value(value))
+            elif modes[index] == 1:
+                values.append(value)
+            else:
+                raise ValueError("Unrecognised mode")
+
+        param_1 = values[0]
+        param_2 = values[1]
+        param_3 = parameters[-1]
+
         if param_1 < param_2:
             self.update_program(param_3, 1)
         else:
             self.update_program(param_3, 0)
 
-        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+        return self.instruction_pointer + instruction_size
 
 
 class Instruction8(Instruction):
@@ -239,13 +256,26 @@ class Instruction8(Instruction):
     def execute(self, program, input=None):
         instruction_size = 4
         parameters = self.value(self.instruction_pointer + 1, self.instruction_pointer + instruction_size)
-        param_1, param_2, param_3 = parameters
+        modes = get_modes(self.value(self.instruction_pointer))
+        values = []
+        for index, value in enumerate(parameters):
+            if modes[index] == 0:
+                values.append(self.value(value))
+            elif modes[index] == 1:
+                values.append(value)
+            else:
+                raise ValueError("Unrecognised mode")
+
+        param_1 = values[0]
+        param_2 = values[1]
+        param_3 = parameters[-1]
+
         if param_1 == param_2:
             self.update_program(param_3, 1)
         else:
             self.update_program(param_3, 0)
 
-        self.set_instruction_pointer(self.instruction_pointer + instruction_size)
+        return self.instruction_pointer + instruction_size
 
 
 class Computer:
@@ -330,41 +360,63 @@ class TestDay02(unittest.TestCase):
 
         self.assertEqual(get_modes(1002), [0, 1, 0])
 
-    def test_part2(self):
-        program = Program("5,1,3,99")
-        instruction = next(iter(program))
-        instruction.execute(program)
-        self.assertEqual(program._instruction_pointer, 99)
+    def test_7_and_8(self):
 
-        program = Program("5,4,3,99,0")
-        instruction = next(iter(program))
-        instruction.execute(program)
-        self.assertEqual(program._instruction_pointer, 0)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,9,8,9,10,9,4,9,99,-1,8")
+            Computer(program).run(diagnostic_id=8)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  1\n")
 
-        program = Program("6,1,3,99")
-        instruction = next(iter(program))
-        instruction.execute(program)
-        self.assertEqual(program._instruction_pointer, 0)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,9,8,9,10,9,4,9,99,-1,8")
+            Computer(program).run(diagnostic_id=3)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  0\n")
 
-        program = Program("6,4,3,99,0")
-        instruction = next(iter(program))
-        instruction.execute(program)
-        self.assertEqual(program._instruction_pointer, 99)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,9,7,9,10,9,4,9,99,-1,8")
+            Computer(program).run(diagnostic_id=3)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  1\n")
 
-        program = Program("7,0,3,0,99")
-        self.assertEqual(Computer(program).run(), 1)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,9,7,9,10,9,4,9,99,-1,8")
+            Computer(program).run(diagnostic_id=9)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  0\n")
 
-        program = Program("7,4,3,0,99")
-        self.assertEqual(Computer(program).run(), 0)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,3,1108,-1,8,3,4,3,99")
+            Computer(program).run(diagnostic_id=8)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  1\n")
 
-        program = Program("8,3,3,0,99")
-        self.assertEqual(Computer(program).run(), 1)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,3,1108,-1,8,3,4,3,99")
+            Computer(program).run(diagnostic_id=9)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  0\n")
 
-        program = Program("8,3,4,0,99")
-        self.assertEqual(Computer(program).run(), 0)
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,3,1107,-1,8,3,4,3,99")
+            Computer(program).run(diagnostic_id=3)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  1\n")
 
-        program = Program("3,9,8,9,10,9,4,9,99,-1,8")
-        print(Computer(program).run(diagnostic_id=8))
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,3,1107,-1,8,3,4,3,99")
+            Computer(program).run(diagnostic_id=9)
+            self.assertEqual(mock_stdout.getvalue(), "Diagnostic code:  0\n")
+
+    def test_jump(self):
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9")
+            Computer(program).run(diagnostic_id=0)
+            self.assertEqual("Diagnostic code:  0\n", mock_stdout.getvalue())
+
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9")
+            Computer(program).run(diagnostic_id=4)
+            self.assertEqual("Diagnostic code:  1\n", mock_stdout.getvalue())
+
+        with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
+            program = Program("3,3,1105,-1,9,1101,0,0,12,4,12,99,1")
+            Computer(program).run(diagnostic_id=0)
+            self.assertEqual("Diagnostic code:  0\n", mock_stdout.getvalue())
 
 
 if __name__ == '__main__':
@@ -377,4 +429,4 @@ if __name__ == '__main__':
     Computer(program).run(diagnostic_id=1)
 
     program = Program(source_code)
-    Computer(program).run(diagnostic_id=9)
+    Computer(program).run(diagnostic_id=5)

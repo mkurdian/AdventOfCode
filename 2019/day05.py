@@ -1,4 +1,5 @@
-from intcode_computer import Program, Computer
+from intcode_computer.program import Program
+from intcode_computer.computer import Computer
 
 
 if __name__ == '__main__':

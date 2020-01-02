@@ -1,6 +1,3 @@
-import unittest
-
-
 def two_adjacent_digits_same(number):
     """
     Returns true if number contains two adjacent digits
@@ -15,6 +12,7 @@ def two_adjacent_digits_same(number):
         i += 1
     return False
 
+
 def separate_digits(number):
     """
     Separate the digits of the number and returns
@@ -26,6 +24,7 @@ def separate_digits(number):
         number = number // 10
     result.reverse()
     return result
+
 
 def never_decrease(number):
     """
@@ -39,6 +38,7 @@ def never_decrease(number):
             return False
         i += 1
     return True
+
 
 def repeated_digit_counts(digits):
     """
@@ -54,6 +54,7 @@ def repeated_digit_counts(digits):
         i = j
     return result
 
+
 def two_adjacent_digits_same_2(number):
     """
     Determine if there are two adjacent matching digits
@@ -62,31 +63,6 @@ def two_adjacent_digits_same_2(number):
     digits = separate_digits(number)
     digit_counts = repeated_digit_counts(digits)
     return any(map(lambda x: x==2, digit_counts))
-
-
-class TestDay04(unittest.TestCase):
-    
-    def test_solution(self):
-        self.assertTrue(two_adjacent_digits_same(111111))
-        self.assertFalse(two_adjacent_digits_same(123456))
-        self.assertTrue(two_adjacent_digits_same(3241125))
-
-        self.assertTrue(never_decrease(123456))
-        self.assertFalse(never_decrease(654321))
-        self.assertFalse(never_decrease(223450))
-
-    def test_part02(self):
-        self.assertTrue(two_adjacent_digits_same_2(112233))
-
-    def test_group_repeated_digits(self):
-        self.assertEqual(repeated_digit_counts([1]), [1])
-        self.assertEqual(repeated_digit_counts([1,1]), [2])
-        self.assertEqual(repeated_digit_counts([1,1,1]), [3])
-        self.assertEqual(repeated_digit_counts([1,2,2]), [1,2])
-        self.assertEqual(repeated_digit_counts([1,2]), [1,1])
-        self.assertEqual(repeated_digit_counts([1,2]), [1,1])
-        self.assertEqual(repeated_digit_counts([1,2,3]), [1,1,1])
-        self.assertEqual(repeated_digit_counts([1,2,3,3]), [1,1,2])
 
 
 if __name__ == '__main__':

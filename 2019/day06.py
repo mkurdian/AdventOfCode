@@ -8,6 +8,7 @@ class BreadthFirstSearchOrbits:
         self._source = source
         self._distance = {}
         self._marked = {}
+        self._prev = {}
 
         self._run_bfs(graph, source)
 
@@ -23,12 +24,33 @@ class BreadthFirstSearchOrbits:
                 if adj not in self._marked:
                     self._distance[adj] = self._distance[node] + 1
                     q.put(adj)
+                    self._prev[adj] = node
+
+    def _get_lowest_common_ancestor(self, start, end):
+        path_to_start = self._get_path(start)
+        path_to_end = self._get_path(end)
+        for node in path_to_start:
+            if node in path_to_end:
+                return node
+        return self._source
+
+    def _get_path(self, node):
+        n = node
+        result = [n]
+        while n != self._source:
+            n = self._prev[n]
+            result.append(n)
+        return result
 
     def total_orbits(self):
         total = 0
         for node in self._graph:
             total += self._distance.get(node, 0)
         return total
+
+    def orbital_transfers(self, start, end):
+        common_ancestor = self._get_lowest_common_ancestor(start, end)
+        return self._distance[start] + self._distance[end] - 2 * self._distance[common_ancestor]
 
 
 class Graph:
@@ -85,9 +107,22 @@ class TestDay06(unittest.TestCase):
         bfs = BreadthFirstSearchOrbits(graph, 'COM')
         self.assertEqual(42, bfs.total_orbits())
 
+    def test_orbital_transfer(self):
+
+        input = ['COM)B', 'B)C', 'C)D', 'D)E', 'E)F', 'B)G', 'G)H', 'D)I', 'E)J', 'J)K', 'K)L', 'K)YOU', 'I)SAN']
+
+        graph = Graph.graph_from_input_stream(input)
+        bfs = BreadthFirstSearchOrbits(graph, 'COM')
+        self.assertEqual(4, bfs.orbital_transfers('K', 'I'))
+
 
 if __name__ == '__main__':
     with open('inputs/input_day06.in') as file:
         graph = Graph.graph_from_input_stream(file)
-        part_1_result = BreadthFirstSearchOrbits(graph, 'COM').total_orbits()
+        bfs = BreadthFirstSearchOrbits(graph, 'COM')
+
+        part_1_result = bfs.total_orbits()
         print("Part 1: ", part_1_result)
+
+        part_2_result = bfs.orbital_transfers('YOU', 'SAN') - 2  # Don't want to count hop from YOU and to SAN.
+        print("Part 2: ", part_2_result)
